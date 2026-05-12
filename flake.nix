@@ -61,7 +61,7 @@
               case "$TEMPLATE" in personal|group) ;; *)
                 echo "usage: shmulsidian-setup [personal|group]" >&2; exit 2 ;;
               esac
-              nix flake init -t "github:shmul95/shmulsidian#$TEMPLATE"
+              nix flake init -t "github:cabanashmul/shmulsidian#$TEMPLATE"
             '';
           };
         in {

@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    shmulsidian.url = "github:shmul95/shmulsidian";
+    shmulsidian.url = "github:cabanashmul/shmulsidian";
     shmulsidian.inputs.nixpkgs.follows = "nixpkgs";
   };
 

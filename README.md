@@ -4,9 +4,9 @@ Claude Code + Obsidian vault scaffold, vault MCP, and Home Manager module — al
 
 ```bash
 mkdir my-vault && cd my-vault
-nix flake init -t github:shmul95/shmulsidian          # personal vault scaffold
+nix flake init -t github:cabanashmul/shmulsidian          # personal vault scaffold
 # or
-nix run github:shmul95/shmulsidian#setup -- personal  # same thing, scriptable
+nix run github:cabanashmul/shmulsidian#setup -- personal  # same thing, scriptable
 ```
 
 The scaffold is **one-shot** — you own the files afterwards. Open the directory in Obsidian.
@@ -15,7 +15,7 @@ The scaffold is **one-shot** — you own the files afterwards. Open the director
 
 ```nix
 {
-  inputs.shmulsidian.url = "github:shmul95/shmulsidian";
+  inputs.shmulsidian.url = "github:cabanashmul/shmulsidian";
 
   outputs = { self, nixpkgs, home-manager, shmulsidian, ... }: {
     homeConfigurations.you = home-manager.lib.homeManagerConfiguration {
@@ -48,7 +48,7 @@ For per-project knowledge bases:
 
 ```bash
 cd my-project-repo
-nix flake init -t github:shmul95/shmulsidian#group
+nix flake init -t github:cabanashmul/shmulsidian#group
 nix run .#init            # registers <project>-shmulsidian-mcp locally
 nix run .#vault-import -- --tag <name>     # pull notes from personal vault
 nix run .#vault-export                     # sync project notes back
