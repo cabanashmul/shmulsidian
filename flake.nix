@@ -70,13 +70,20 @@
             paths = map wrapScript scripts;
           };
 
-          # TODO(v1.0): real vault MCP server (doc creation, semantic + keyword
-          # embedding search). This stub keeps the wiring testable end-to-end.
-          vault-mcp = pkgs.writeShellApplication {
-            name = "shmulsidian-mcp";
-            text = ''
-              echo "shmulsidian-mcp stub — implement vault MCP here" >&2
-              exit 1
+          # Python vault MCP. Accepts --vault-path and --project-name so the
+          # same binary serves both the global (programs.shmulsidian) and the
+          # per-project (group template's <project>-init) wiring.
+          # TODO(v1.0): replace stub body with the real MCP (doc creation,
+          # semantic + keyword embedding search).
+          vault-mcp = pkgs.python3Packages.buildPythonApplication {
+            pname = "shmulsidian-mcp";
+            version = "0.1.0";
+            format = "other";
+            src = ./mcp;
+            dontBuild = true;
+            doCheck = false;
+            installPhase = ''
+              install -Dm755 shmulsidian_mcp.py $out/bin/shmulsidian-mcp
             '';
           };
 

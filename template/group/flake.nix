@@ -11,15 +11,14 @@
     let
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-
-      projectName = "CHANGE_ME";
     in {
       apps = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          vaultMcp = shmulsidian.packages.${system}.vault-mcp;
 
           vault-import = pkgs.writeShellApplication {
-            name = "${projectName}-vault-import";
+            name = "vault-import";
             runtimeInputs = [ pkgs.rsync pkgs.coreutils ];
             text = ''
               set -euo pipefail
@@ -43,35 +42,90 @@
           };
 
           vault-export = pkgs.writeShellApplication {
-            name = "${projectName}-vault-export";
+            name = "vault-export";
             runtimeInputs = [ pkgs.rsync pkgs.coreutils ];
             text = ''
               set -euo pipefail
               : "''${PERSONAL_VAULT_PATH:?PERSONAL_VAULT_PATH not set}"
               GROUP_VAULT="$(pwd)"
-              echo "export $GROUP_VAULT → $PERSONAL_VAULT_PATH/02_Projects/${projectName}"
+              echo "export $GROUP_VAULT → $PERSONAL_VAULT_PATH"
               # TODO: sync group vault content (project + notes) back into personal vault
               exit 1
             '';
           };
 
+          # `nix run .#init -- <project-name> [--providers claude-code,codex,copilot]`
+          # Registers the Python vault MCP locally under "<project>-shmulsidian-mcp"
+          # and links the global commands into project-local provider directories.
           project-init = pkgs.writeShellApplication {
-            name = "${projectName}-init";
+            name = "project-init";
             runtimeInputs = [ pkgs.coreutils pkgs.jq ];
             text = ''
               set -euo pipefail
-              # Wires the group vault's MCP + commands into the local project under
-              # the name "${projectName}-shmulsidian-*" so they don't collide with
-              # the global shmulsidian-mcp registered by programs.shmulsidian.
-              mkdir -p .claude
-              # TODO: write .claude/settings.json with mcpServers."${projectName}-shmulsidian-mcp"
-              echo "initialised ${projectName} (stub)"
+
+              PROJECT="''${1:-}"; shift || true
+              if [[ -z "$PROJECT" ]]; then
+                echo "usage: project-init <project-name> [--providers claude-code,codex,copilot]" >&2
+                exit 2
+              fi
+
+              PROVIDERS="claude-code"
+              while [[ $# -gt 0 ]]; do
+                case "$1" in
+                  --providers) PROVIDERS="$2"; shift 2 ;;
+                  *) echo "unknown arg: $1" >&2; exit 2 ;;
+                esac
+              done
+
+              MCP_NAME="''${PROJECT}-shmulsidian-mcp"
+              MCP_BIN="${vaultMcp}/bin/shmulsidian-mcp"
+              VAULT_PATH="$(pwd)"
+
+              echo "wiring $MCP_NAME → $MCP_BIN (providers: $PROVIDERS)"
+
+              IFS=',' read -ra PROVIDER_LIST <<< "$PROVIDERS"
+              for provider in "''${PROVIDER_LIST[@]}"; do
+                case "$provider" in
+                  claude-code)
+                    mkdir -p .claude
+                    settings=".claude/settings.json"
+                    [[ -f "$settings" ]] || echo '{}' > "$settings"
+                    tmp="$(mktemp)"
+                    jq --arg name "$MCP_NAME" --arg bin "$MCP_BIN" \
+                       --arg proj "$PROJECT" --arg vault "$VAULT_PATH" \
+                       '.mcpServers[$name] = {command:$bin, args:["--project-name",$proj,"--vault-path",$vault]}' \
+                       "$settings" > "$tmp" && mv "$tmp" "$settings"
+                    ;;
+                  codex)
+                    mkdir -p .codex
+                    cat > ".codex/mcp.$MCP_NAME.toml" <<EOF
+                    [mcp_servers.$MCP_NAME]
+                    command = "$MCP_BIN"
+                    args = ["--project-name", "$PROJECT", "--vault-path", "$VAULT_PATH"]
+                    EOF
+                    ;;
+                  copilot)
+                    mkdir -p .vscode
+                    settings=".vscode/settings.json"
+                    [[ -f "$settings" ]] || echo '{}' > "$settings"
+                    tmp="$(mktemp)"
+                    jq --arg name "$MCP_NAME" --arg bin "$MCP_BIN" \
+                       --arg proj "$PROJECT" --arg vault "$VAULT_PATH" \
+                       '.["github.copilot.chat.mcp.servers"][$name] = {command:$bin, args:["--project-name",$proj,"--vault-path",$vault]}' \
+                       "$settings" > "$tmp" && mv "$tmp" "$settings"
+                    ;;
+                  *) echo "unknown provider: $provider" >&2; exit 2 ;;
+                esac
+                echo "  ✓ $provider"
+              done
+
+              echo "done — $MCP_NAME registered locally"
             '';
           };
         in {
-          vault-import = { type = "app"; program = "${vault-import}/bin/${projectName}-vault-import"; };
-          vault-export = { type = "app"; program = "${vault-export}/bin/${projectName}-vault-export"; };
-          init         = { type = "app"; program = "${project-init}/bin/${projectName}-init"; };
+          vault-import = { type = "app"; program = "${vault-import}/bin/vault-import"; };
+          vault-export = { type = "app"; program = "${vault-export}/bin/vault-export"; };
+          init         = { type = "app"; program = "${project-init}/bin/project-init"; };
         }
       );
     };
