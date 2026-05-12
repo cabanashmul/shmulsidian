@@ -28,6 +28,43 @@
           vaultMcp = shmulsidian.packages.${system}.vault-mcp;
           commandsSrc = "${shmulsidian}/.claude/commands";
 
+          # Per-user GSD scratch space inside 02_Projects/<project>/GSD-<user>.
+          # Run from inside the target code repo; symlinks ./.planning to the
+          # group vault's per-user dir, sized from git identity to avoid
+          # collisions when multiple operators share a project.
+          link-gsd = pkgs.writeShellApplication {
+            name = "link-gsd";
+            runtimeInputs = [ pkgs.coreutils pkgs.git ];
+            text = ''
+              set -euo pipefail
+
+              PROJECT="''${1:-}"
+              if [[ -z "$PROJECT" ]]; then
+                echo "usage: link-gsd <project>" >&2
+                exit 2
+              fi
+
+              if [[ -z "''${GROUP_VAULT_PATH:-}" ]]; then
+                echo "no group vault — set GROUP_VAULT_PATH to your group vault root" >&2
+                exit 1
+              fi
+
+              EMAIL="$(git config user.email 2>/dev/null || true)"
+              if [[ -n "$EMAIL" ]]; then
+                USER_SLUG="$(echo "$EMAIL" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/^-*//;s/-*$//')"
+              else
+                USER_SLUG="''${USER:-anon}"
+                echo "warn: git user.email unset, falling back to \$USER=$USER_SLUG" >&2
+              fi
+
+              TARGET="$GROUP_VAULT_PATH/02_Projects/$PROJECT/GSD-$USER_SLUG"
+              mkdir -p "$TARGET"
+              ln -sfn "$TARGET" .planning
+              echo "linked $(pwd)/.planning → $TARGET"
+              echo "(add .planning to this repo's .gitignore if not already)"
+            '';
+          };
+
           # vault-import / vault-export operate on whatever vault the user is
           # standing in — no project prefix. Both require a personal vault.
           vault-import = pkgs.writeShellApplication {
@@ -142,6 +179,7 @@
           vault-import = { type = "app"; program = "${vault-import}/bin/vault-import"; };
           vault-export = { type = "app"; program = "${vault-export}/bin/vault-export"; };
           init         = { type = "app"; program = "${project-init}/bin/${projectName}-init"; };
+          link-gsd     = { type = "app"; program = "${link-gsd}/bin/link-gsd"; };
         }
       );
     };
