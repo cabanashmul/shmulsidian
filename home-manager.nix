@@ -22,7 +22,7 @@ in {
 
     personalVaultPath = lib.mkOption {
       type = lib.types.str;
-      default = "${config.home.homeDirectory}/shmulistan";
+      default = "${config.home.homeDirectory}/shmulsidian";
       description = ''
         Absolute path to the user's personal shmulsidian vault. Exported as
         $PERSONAL_VAULT_PATH for downstream tools and consumed by the vault MCP.
