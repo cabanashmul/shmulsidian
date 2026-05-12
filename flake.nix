@@ -70,21 +70,25 @@
             paths = map wrapScript scripts;
           };
 
-          # Python vault MCP. Accepts --vault-path and --project-name so the
-          # same binary serves both the global (programs.shmulsidian) and the
-          # per-project (group template's <project>-init) wiring.
-          # TODO(v1.0): replace stub body with the real MCP (doc creation,
-          # semantic + keyword embedding search).
+          # Python vault MCP. Same binary serves the global (programs.shmulsidian)
+          # and per-project (group template's <project>-init) wiring via the
+          # --vault-path / --project-name / --transport flags.
           vault-mcp = pkgs.python3Packages.buildPythonApplication {
             pname = "shmulsidian-mcp";
             version = "0.1.0";
-            format = "other";
+            pyproject = true;
             src = ./mcp;
-            dontBuild = true;
+            build-system = [ pkgs.python3Packages.setuptools ];
+            dependencies = with pkgs.python3Packages; [
+              mcp
+              sqlite-vec
+              fastembed
+              pydantic
+              anyio
+              uvicorn
+              starlette
+            ];
             doCheck = false;
-            installPhase = ''
-              install -Dm755 shmulsidian_mcp.py $out/bin/shmulsidian-mcp
-            '';
           };
 
           inherit setup;
