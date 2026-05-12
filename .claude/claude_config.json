@@ -1,0 +1,45 @@
+{
+  "name": "Claudesidian",
+  "description": "Claude Code + Obsidian Starter Kit",
+  "version": "1.0.0",
+  "settings": {
+    "default_mode": "thinking",
+    "auto_save": true,
+    "context_awareness": true
+  },
+  "commands": {
+    "thinking-partner": {
+      "description": "Collaborative thinking and exploration",
+      "file": "commands/thinking-partner.md"
+    },
+    "inbox-processor": {
+      "description": "Organize inbox items using PARA method",
+      "file": "commands/inbox-processor.md"
+    },
+    "research-assistant": {
+      "description": "Deep research and synthesis",
+      "file": "commands/research-assistant.md"
+    },
+    "daily-review": {
+      "description": "End-of-day review and planning",
+      "file": "commands/daily-review.md"
+    },
+    "weekly-synthesis": {
+      "description": "Weekly pattern recognition and synthesis",
+      "file": "commands/weekly-synthesis.md"
+    }
+  },
+  "shortcuts": {
+    "tp": "thinking-partner",
+    "ip": "inbox-processor",
+    "ra": "research-assistant",
+    "dr": "daily-review",
+    "ws": "weekly-synthesis"
+  },
+  "preferences": {
+    "primary_folders": ["00_Inbox", "01_Projects", "02_Areas", "03_Resources"],
+    "template_folder": "06_Metadata/Templates",
+    "archive_after_days": 30,
+    "default_note_location": "00_Inbox"
+  }
+}

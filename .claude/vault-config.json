@@ -1,0 +1,24 @@
+{
+  "user": {
+    "name": "shmul95",
+    "background": {},
+    "profileSources": [],
+    "customContext": "",
+    "publicProfile": false
+  },
+  "vaultPath": null,
+  "fileNamingPattern": "hybrid-zettelkasten",
+  "organizationMethod": "Zettelkasten",
+  "primaryUses": ["research", "knowledge-base", "project-management"],
+  "writingStyle": "academic",
+  "noteIdFormat": "hybrid",
+  "tools": {
+    "geminiVision": false,
+    "firecrawl": false
+  },
+  "weeklyReview": true,
+  "topics": ["technology", "software"],
+  "importedAt": null,
+  "createdAt": "2026-03-10",
+  "lastUpdated": "2026-03-10"
+}
