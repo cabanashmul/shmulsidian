@@ -1,5 +1,5 @@
 {
-  description = "shmulistan — Obsidian vault template, utilities, and Home Manager module";
+  description = "shmulsidian — Obsidian vault template, utilities, vault MCP, and Home Manager module";
 
   inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
@@ -8,20 +8,18 @@
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in {
-      # `nix flake init -t github:shmul95/shmulistan-template` scaffolds a fresh vault
-      # from ./template (PARA dirs + READMEs + MEMORY.md). One-shot copy — user owns the result.
-      templates.default = {
-        path = ./template;
-        description = "shmulistan personal vault starter (PARA + Zettelkasten + MEMORY.md)";
-        welcomeText = ''
-          Vault scaffold copied.
-
-          Next:
-            1. Enable the Home Manager module to get the CLI tools and MCP wiring.
-            2. Open this directory as an Obsidian vault.
-        '';
+      # One-shot scaffolds — `nix flake init -t github:shmul95/shmulsidian[#group]`.
+      templates = {
+        default  = self.templates.personal;
+        personal = {
+          path = ./template/personal;
+          description = "shmulsidian personal vault (PARA + Zettelkasten + MEMORY.md)";
+        };
+        group = {
+          path = ./template/group;
+          description = "shmulsidian group/project vault wired to a personal vault";
+        };
       };
-      templates.shmulistan = self.templates.default;
 
       packages = forAllSystems (system:
         let
@@ -29,17 +27,17 @@
 
           wrapScript = { name, src, deps ? [] }:
             pkgs.stdenvNoCC.mkDerivation {
-              pname = "shmulistan-${name}";
+              pname = "shmulsidian-${name}";
               version = "0.1.0";
               inherit src;
               nativeBuildInputs = [ pkgs.makeWrapper ];
               dontUnpack = true;
               installPhase = ''
                 mkdir -p $out/bin
-                cp $src $out/bin/shmulistan-${name}
-                chmod +x $out/bin/shmulistan-${name}
+                cp $src $out/bin/shmulsidian-${name}
+                chmod +x $out/bin/shmulsidian-${name}
               '' + pkgs.lib.optionalString (deps != []) ''
-                wrapProgram $out/bin/shmulistan-${name} \
+                wrapProgram $out/bin/shmulsidian-${name} \
                   --prefix PATH : ${pkgs.lib.makeBinPath deps}
               '';
             };
@@ -51,14 +49,41 @@
             { name = "update-attachment-links"; src = ./.scripts/update-attachment-links.js; deps = [ pkgs.nodejs ]; }
             { name = "fix-renamed-links";       src = ./.scripts/fix-renamed-links.js;       deps = [ pkgs.nodejs ]; }
           ];
+
+          # `nix run github:shmul95/shmulsidian#setup` — usable directly or wrapped
+          # by a downstream flake (e.g. cabanashmul#setup).
+          setup = pkgs.writeShellApplication {
+            name = "shmulsidian-setup";
+            runtimeInputs = [ pkgs.nix ];
+            text = ''
+              set -euo pipefail
+              TEMPLATE="''${1:-personal}"
+              case "$TEMPLATE" in personal|group) ;; *)
+                echo "usage: shmulsidian-setup [personal|group]" >&2; exit 2 ;;
+              esac
+              nix flake init -t "github:shmul95/shmulsidian#$TEMPLATE"
+            '';
+          };
         in {
           default = pkgs.symlinkJoin {
-            name = "shmulistan-scripts";
+            name = "shmulsidian-scripts";
             paths = map wrapScript scripts;
           };
+
+          # TODO(v1.0): real vault MCP server (doc creation, semantic + keyword
+          # embedding search). This stub keeps the wiring testable end-to-end.
+          vault-mcp = pkgs.writeShellApplication {
+            name = "shmulsidian-mcp";
+            text = ''
+              echo "shmulsidian-mcp stub — implement vault MCP here" >&2
+              exit 1
+            '';
+          };
+
+          inherit setup;
         }
       );
 
-      homeManagerModules.default = import ./home-manager.nix { shmulistan = self; };
+      homeManagerModules.default = import ./home-manager.nix { shmulsidian = self; };
     };
 }

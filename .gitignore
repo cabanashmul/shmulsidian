@@ -41,3 +41,6 @@ result
 # Vector embedding sidecar (derived data, regenerable)
 .vault-index/
 /.codex
+
+# GSD planning dir (local symlink, not tracked)
+.planning

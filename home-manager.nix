@@ -1,54 +1,58 @@
-{ shmulistan }:
+{ shmulsidian }:
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.programs.shmulistan;
-  supportedProviders = [ "claude-code" "codex" ];
+  cfg = config.programs.shmulsidian;
 
-  mcpConfigDir = "${config.xdg.configHome}/shmulistan/mcp";
+  supportedProviders = [ "claude-code" "codex" "copilot" ];
 
-  # Per-provider machine-wide MCP config describing how to talk to the vault.
-  # Provider tooling reads/imports these from $XDG_CONFIG_HOME/shmulistan/mcp/.
-  mcpConfigFor = provider: {
-    name = "shmulistan";
-    vaultPath = cfg.personalVaultPath;
-    provider = provider;
+  shmulsidianRoot = shmulsidian;
+  vaultMcp = shmulsidian.packages.${pkgs.stdenv.hostPlatform.system}.vault-mcp;
+
+  providerModule = name: import (./modules/providers + "/${name}.nix") {
+    inherit lib pkgs config shmulsidianRoot vaultMcp;
+    mcpEnabled = cfg.mcp.enable;
   };
+
+  providerImports = map providerModule cfg.providers;
 in {
-  options.programs.shmulistan = {
-    enable = lib.mkEnableOption "shmulistan vault utilities and MCP wiring";
+  options.programs.shmulsidian = {
+    enable = lib.mkEnableOption "shmulsidian vault utilities, MCP, and slash commands";
 
     personalVaultPath = lib.mkOption {
       type = lib.types.str;
       default = "${config.home.homeDirectory}/shmulistan";
       description = ''
-        Absolute path to the user's shmulistan Obsidian vault.
-        Exported as $PERSONAL_VAULT_PATH for downstream tools.
+        Absolute path to the user's personal shmulsidian vault. Exported as
+        $PERSONAL_VAULT_PATH for downstream tools and consumed by the vault MCP.
       '';
     };
 
-    mcp.providers = lib.mkOption {
+    providers = lib.mkOption {
       type = lib.types.listOf (lib.types.enum supportedProviders);
       default = [ "claude-code" ];
-      example = [ "claude-code" "codex" ];
+      example = [ "claude-code" "codex" "copilot" ];
       description = ''
-        AI providers to wire vault-aware MCP config for. One config file is written
-        per enabled provider under $XDG_CONFIG_HOME/shmulistan/mcp/<provider>.json.
+        AI providers to wire MCP and slash commands for. Each provider has its
+        own adapter in modules/providers/<name>.nix — add a new file to extend.
       '';
+    };
+
+    mcp.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Install the single vault MCP server and wire it into every enabled provider.";
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    home.packages = [
-      shmulistan.packages.${pkgs.stdenv.hostPlatform.system}.default
-    ];
+  config = lib.mkIf cfg.enable (lib.mkMerge ([
+    {
+      home.packages = [
+        shmulsidian.packages.${pkgs.stdenv.hostPlatform.system}.default
+      ] ++ lib.optional cfg.mcp.enable vaultMcp;
 
-    home.sessionVariables.PERSONAL_VAULT_PATH = cfg.personalVaultPath;
-
-    xdg.configFile = lib.listToAttrs (map (provider: {
-      name = "shmulistan/mcp/${provider}.json";
-      value.text = builtins.toJSON (mcpConfigFor provider);
-    }) cfg.mcp.providers);
-  };
+      home.sessionVariables.PERSONAL_VAULT_PATH = cfg.personalVaultPath;
+    }
+  ] ++ providerImports));
 }

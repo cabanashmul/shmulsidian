@@ -1,36 +1,32 @@
-# shmulistan-template
+# shmulsidian
 
-A Nix-flake template for a Claude Code + Obsidian vault. Provides:
-
-- A starter vault skeleton (PARA + Zettelkasten + MEMORY.md) via `nix flake init`.
-- A Home Manager module that installs CLI utilities, exports `$PERSONAL_VAULT_PATH`, and writes machine-wide MCP config per AI provider.
-
-## Scaffold a new vault
+Claude Code + Obsidian vault scaffold, vault MCP, and Home Manager module — all behind one flake.
 
 ```bash
 mkdir my-vault && cd my-vault
-nix flake init -t github:shmul95/shmulistan-template
-git init && git add -A && git commit -m "init from shmulistan-template"
+nix flake init -t github:shmul95/shmulsidian          # personal vault scaffold
+# or
+nix run github:shmul95/shmulsidian#setup -- personal  # same thing, scriptable
 ```
 
-The scaffold is a **one-shot copy** — you own the files afterwards. Open the directory as an Obsidian vault.
+The scaffold is **one-shot** — you own the files afterwards. Open the directory in Obsidian.
 
-## Enable the Home Manager module
+## Home Manager wiring
 
 ```nix
-# flake.nix
 {
-  inputs.shmulistan-template.url = "github:shmul95/shmulistan-template";
+  inputs.shmulsidian.url = "github:shmul95/shmulsidian";
 
-  outputs = { self, nixpkgs, home-manager, shmulistan-template, ... }: {
+  outputs = { self, nixpkgs, home-manager, shmulsidian, ... }: {
     homeConfigurations.you = home-manager.lib.homeManagerConfiguration {
       modules = [
-        shmulistan-template.homeManagerModules.default
+        shmulsidian.homeManagerModules.default
         {
-          programs.shmulistan = {
+          programs.shmulsidian = {
             enable = true;
             personalVaultPath = "/home/you/my-vault";
-            mcp.providers = [ "claude-code" "codex" ];
+            providers = [ "claude-code" "codex" "copilot" ];
+            mcp.enable = true;  # default
           };
         }
       ];
@@ -39,26 +35,42 @@ The scaffold is a **one-shot copy** — you own the files afterwards. Open the d
 }
 ```
 
-What this gives you:
+You get:
 
-- `$PERSONAL_VAULT_PATH` exported to your shell (downstream tools key off this).
-- `shmulistan-*` CLI utilities on `$PATH` (firecrawl-scrape, transcript-extract, …).
-- Per-provider MCP config at `$XDG_CONFIG_HOME/shmulistan/mcp/<provider>.json` for each entry in `mcp.providers`.
+- `$PERSONAL_VAULT_PATH` exported to your shell.
+- `shmulsidian-*` CLI utilities on `$PATH`.
+- The vault MCP server (`shmulsidian-mcp`) wired into every enabled provider.
+- Slash commands installed at the right per-provider location (claude-code: `~/.claude/commands`, codex: `~/.codex/prompts`, copilot: fragment under `$XDG_CONFIG_HOME/shmulsidian/providers/`).
+
+## Group vaults
+
+For per-project knowledge bases:
+
+```bash
+cd my-project-repo
+nix flake init -t github:shmul95/shmulsidian#group
+nix run .#init            # registers <project>-shmulsidian-mcp locally
+nix run .#vault-import -- --tag <name>     # pull notes from personal vault
+nix run .#vault-export                     # sync project notes back
+```
+
+Group MCP/commands register **project-locally** under `<project>-shmulsidian-*` so they don't collide with the global `shmulsidian-mcp` from the HM module.
 
 ## Updates
 
-Two channels by design:
+| Layer                                | Update channel                                                   |
+| ------------------------------------ | ---------------------------------------------------------------- |
+| Starter content (`template/*`)       | One-shot. Existing users keep what they have.                    |
+| MCP, commands, scripts, HM module    | `nix flake update shmulsidian && home-manager switch`.           |
 
-| What you're updating          | How users get it                                                                            |
-| ----------------------------- | ------------------------------------------------------------------------------------------- |
-| Starter content (`template/`) | One-shot. Existing users keep what they have; new users get the change on `nix flake init`. |
-| Module / scripts / MCP wiring | Continuous. `nix flake update shmulistan-template && home-manager switch`.                  |
+## Adding a provider
 
-Put user-editable starter docs in `template/`. Put anything you want to keep current (new CLI script, new MCP server, new slash command) in the flake outputs / HM module.
+Drop `modules/providers/<name>.nix` exposing `home.file` / `xdg.configFile` entries for that tool's MCP + prompt locations. Add `<name>` to `supportedProviders` in `home-manager.nix`. Done — no surgery elsewhere.
 
-## Supported MCP providers
+## Roadmap
 
-`claude-code`, `codex`. Extend `supportedProviders` in `home-manager.nix` to add more.
+- **v1.0** — personal + group templates, vault MCP wiring, claude-code/codex/copilot adapters.
+- **v1.1+** — real vault MCP impl (semantic + keyword search, doc creation); vault HTTP browser daemon with SSH allowlist (likely via HM user-mode systemd or Docker — `services.shmulsidian` deferred).
 
 ## License
 
