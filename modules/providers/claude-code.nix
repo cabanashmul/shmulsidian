@@ -2,12 +2,14 @@
 #
 # Writes:
 #   ~/.claude/commands/<name>.md   (slash commands, via home.file symlink)
-#   ~/.claude/settings.json        (mcpServers key, via home.activation merge)
+#   ~/.claude.json                 (mcpServers key, via home.activation merge)
 #
-# Claude Code reads MCP servers exclusively from the `mcpServers` key in
-# settings.json — the ~/.claude/mcp-servers/ directory is NOT auto-discovered.
-# We use a home.activation script that does a safe JSON merge so Claude Code
-# can still write other keys to that file without conflicts.
+# Claude Code stores user-level MCP servers in ~/.claude.json under
+# .mcpServers.<name>. Per-project MCPs live under .projects.<path>.mcpServers.
+# The ~/.claude/mcp-servers/ directory and ~/.claude/settings.json mcpServers
+# are NOT used for MCP discovery.
+# We use a home.activation script that jq-merges only the shmulsidian key so
+# Claude Code can still manage the rest of ~/.claude.json freely.
 { lib, pkgs, config, shmulsidianRoot, vaultMcp, mcpEnabled }:
 
 let
@@ -15,21 +17,22 @@ let
     command = "${vaultMcp}/bin/shmulsidian-mcp";
     args = [ ];
     env.PERSONAL_VAULT_PATH = config.programs.shmulsidian.personalVaultPath;
+    type = "stdio";
   };
 
   mergeScript = pkgs.writeShellScript "claude-code-merge-mcp" ''
     set -euo pipefail
-    SETTINGS="$HOME/.claude/settings.json"
+    DOTFILE="$HOME/.claude.json"
 
     # Bootstrap if missing or empty
-    if [ ! -s "$SETTINGS" ]; then
-      echo '{}' > "$SETTINGS"
+    if [ ! -s "$DOTFILE" ]; then
+      echo '{}' > "$DOTFILE"
     fi
 
     # Merge: add/replace only the shmulsidian key under mcpServers
     ${pkgs.jq}/bin/jq --argjson entry '${mcpEntry}' \
       '.mcpServers.shmulsidian = $entry' \
-      "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"
+      "$DOTFILE" > "$DOTFILE.tmp" && mv "$DOTFILE.tmp" "$DOTFILE"
   '';
 in
 {
