@@ -116,37 +116,43 @@ Do not store notes inside this repo. Do not commit vault files here.
 
 ## write-mcp-config routine
 
-The `shmulsidian-mcp` server is **personal** — it points at an absolute vault path that
-differs per developer. It must never be written into committed project files (`.claude/settings.json`,
-`.codex/config.toml`, etc.), because those paths would be wrong on another machine.
+Two MCP entries exist — they are distinct and go to different places:
 
-The correct wiring is:
-- **Global personal MCP** (personal vault `~/shmulsidian`) → managed by home-manager, lives in
-  `~/.claude.json`. `/wiring` must not touch this.
-- **Project-specific vault MCP** (e.g. `universe-vault` linked to this repo) → belongs in
-  `~/.claude.json` under `.projects.<repo-path>.mcpServers`, which is personal and never committed.
+| Entry | What it is | Where it lives |
+|---|---|---|
+| `shmulsidian` | Personal vault (`~/shmulsidian`) | `~/.claude.json` — home-manager territory, never touched here |
+| `<repo-name>` | This group vault linked to the repo | In-repo `.claude/settings.json` — written by this routine |
 
-This routine therefore does **nothing** to committed project files. Instead, it:
+The in-repo entry uses `SHMULSIDIAN_VAULT` as the vault path env var (set by `.envrc`) so the
+config is machine-independent and safe to commit.
 
-1. Informs the user that the personal `shmulsidian-mcp` is already wired globally by home-manager.
-2. Tells the user how to add a project-specific vault entry to `~/.claude.json` manually if needed:
+### Provider: claude-code (`.claude/` directory exists in the repo)
 
-```
-To expose this vault in Claude Code when working in <repo>:
-  open ~/.claude.json and add under .projects."<repo-path>".mcpServers:
-  {
-    "universe-vault": {
+Read `.claude/settings.json` (create `{}` if absent). Merge the following under `mcpServers`,
+preserving all other keys. Use the repos.toml `name` field as the MCP server name.
+If an entry with the same name already exists, confirm before overwriting.
+
+```json
+{
+  "mcpServers": {
+    "<repo-name>": {
       "command": "shmulsidian-mcp",
-      "args": ["--vault-path", "<vault-root>", "--project-name", "<name>"],
+      "args": ["--vault-path", "<vault-root>", "--project-name", "<repo-name>"],
       "env": {},
       "type": "stdio"
     }
   }
-  (This file is personal and never committed.)
+}
 ```
 
-3. For codex: same — do not write `.codex/mcp.shmulsidian.toml` inside the repo. Point the
-   user to add the entry to `~/.codex/config.toml` manually.
+`<vault-root>` is the absolute path from repos.toml. This path is personal but `.envrc` already
+encodes the same assumption. Developers who clone the repo run `/wiring add` themselves to
+regenerate it with their own vault path.
+
+### Provider: codex (`.codex/` directory exists in the repo)
+
+Append to `~/.codex/config.toml` (never to a file inside the repo — codex has no
+per-project config file that is safe to commit). Inform the user what was added.
 
 ---
 
