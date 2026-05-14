@@ -44,3 +44,6 @@ result
 
 # GSD planning dir (local symlink, not tracked)
 .planning
+
+# pycache
+__pycache__/
