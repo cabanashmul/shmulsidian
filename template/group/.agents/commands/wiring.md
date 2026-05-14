@@ -121,15 +121,15 @@ Two MCP entries exist — they are distinct and go to different places:
 | Entry | What it is | Where it lives |
 |---|---|---|
 | `shmulsidian` | Personal vault (`~/shmulsidian`) | `~/.claude.json` — home-manager territory, never touched here |
-| `<repo-name>` | This group vault linked to the repo | In-repo `.claude/settings.json` — written by this routine |
+| `<repo-name>` | This group vault linked to the repo | In-repo `.mcp.json` — written by this routine, gitignored |
 
-The in-repo entry uses `SHMULSIDIAN_VAULT` as the vault path env var (set by `.envrc`) so the
-config is machine-independent and safe to commit.
+`.mcp.json` is Claude Code v2+'s project-level MCP file (`.claude/settings.json` no longer
+carries `mcpServers`). It contains a personal absolute path so it must be gitignored.
+Developers who clone the repo run `/wiring add` once to regenerate it for their machine.
 
-### Provider: claude-code (`.claude/` directory exists in the repo)
+### Provider: claude-code
 
-Read `.claude/settings.json` (create `{}` if absent). Merge the following under `mcpServers`,
-preserving all other keys. Use the repos.toml `name` field as the MCP server name.
+Write or merge `.mcp.json` at the repo root. Use the repos.toml `name` as the server name.
 If an entry with the same name already exists, confirm before overwriting.
 
 ```json
@@ -145,14 +145,12 @@ If an entry with the same name already exists, confirm before overwriting.
 }
 ```
 
-`<vault-root>` is the absolute path from repos.toml. This path is personal but `.envrc` already
-encodes the same assumption. Developers who clone the repo run `/wiring add` themselves to
-regenerate it with their own vault path.
+Also ensure `.mcp.json` is in the repo's `.gitignore` (append if missing).
 
 ### Provider: codex (`.codex/` directory exists in the repo)
 
-Append to `~/.codex/config.toml` (never to a file inside the repo — codex has no
-per-project config file that is safe to commit). Inform the user what was added.
+Append to `~/.codex/config.toml` (codex has no per-project config file).
+Inform the user what was added.
 
 ---
 
