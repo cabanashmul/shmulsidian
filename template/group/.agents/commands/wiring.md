@@ -135,7 +135,7 @@ If an entry with the same name already exists, confirm before overwriting.
 ```json
 {
   "mcpServers": {
-    "<repo-name>": {
+    "<repo-name>-vault": {
       "command": "shmulsidian-mcp",
       "args": ["--vault-path", "<vault-root>", "--project-name", "<repo-name>"],
       "env": {},
