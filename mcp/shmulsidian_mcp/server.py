@@ -23,10 +23,6 @@ def build_app(vault: Path, project_name: str | None) -> FastMCP:
         refs = [(n.path, n.mtime) for n in iter_notes(vault)]
         return index.reindex(refs)
 
-    # Warm the index on startup. First call also lazily downloads the
-    # fastembed model into the user's cache.
-    _sync_index()
-
     @app.tool()
     def list_notes(folder: str | None = None, limit: int = 200) -> list[dict]:
         """List notes in the vault, optionally filtered to a folder. Newest first."""
