@@ -36,6 +36,9 @@ let
   '';
 in
 {
+  # Installs global vault-agnostic commands (inbox-processor, thinking-partner, etc.).
+  # Vault-local commands (wiring, etc.) must NOT be added here — they live only in
+  # <vault>/.claude/commands/ and are never installed globally.
   home.file.".claude/commands".source = "${shmulsidianRoot}/.claude/commands";
 
   home.activation.claudeCodeMcpWire = lib.mkIf mcpEnabled (
