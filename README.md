@@ -39,22 +39,37 @@ You get:
 
 - `$PERSONAL_VAULT_PATH` exported to your shell.
 - `shmulsidian-*` CLI utilities on `$PATH`.
-- The vault MCP server (`shmulsidian-mcp`) wired into every enabled provider.
-- Slash commands installed at the right per-provider location (claude-code: `~/.claude/commands`, codex: `~/.codex/prompts`, copilot: fragment under `$XDG_CONFIG_HOME/shmulsidian/providers/`).
+- The personal vault MCP server (`shmulsidian`) wired into `~/.claude.json` (user-level, visible in every project).
+- Slash commands available vault-locally when you open the vault in Claude Code — commands are **never** installed globally.
 
 ## Group vaults
 
-For per-project knowledge bases:
+For per-project knowledge bases, create a vault git repo then wire it to each project repo using the `/wiring` command (runs inside the vault, not the project):
 
 ```bash
-cd my-project-repo
-nix flake init -t github:cabanashmul/shmulsidian#group
-nix run .#init            # registers <project>-shmulsidian-mcp locally
-nix run .#vault-import -- --tag <name>     # pull notes from personal vault
-nix run .#vault-export                     # sync project notes back
+# Inside the group vault (e.g. universe-vault/)
+/wiring add ../my-project-repo
 ```
 
-Group MCP/commands register **project-locally** under `<project>-shmulsidian-*` so they don't collide with the global `shmulsidian-mcp` from the HM module.
+This writes three things into the project repo:
+
+| File | What it does |
+|---|---|
+| `.mcp.json` | Project-level MCP entry (`<repo>-vault` server name) — gitignored, each developer regenerates it |
+| `.envrc` | Exports `SHMULSIDIAN_VAULT` so agents know where the vault is |
+| `CLAUDE.md` / `AGENTS.md` | Vault section pointing agents at the right folders |
+
+The MCP server name uses a `-vault` suffix (e.g. `universe-vault`) so it never collides with a future project-specific MCP for the same repo.
+
+Other `/wiring` sub-commands:
+
+```bash
+/wiring status   # check which files are in place for each registered repo
+/wiring sync     # re-write agent files + MCP config for all registered repos
+/wiring remove <name>  # unregister a repo
+```
+
+`.shmulsidian/` (registry + search index, contains absolute local paths) is always gitignored — each developer runs `/wiring add` once after cloning.
 
 ## Updates
 
