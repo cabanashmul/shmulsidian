@@ -27,7 +27,11 @@ class VaultIndex:
         self.vault = vault
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.db_path)
+        # timeout lets concurrent sessions wait out a transient lock instead of
+        # erroring immediately; WAL mode lets readers and a writer coexist.
+        self.conn = sqlite3.connect(self.db_path, timeout=30.0)
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA busy_timeout=30000")
         self.conn.enable_load_extension(True)
         sqlite_vec.load(self.conn)
         self.conn.enable_load_extension(False)
